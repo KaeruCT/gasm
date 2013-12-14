@@ -1,0 +1,8 @@
+; code goes here
+DATA
+name "Andres"
+
+CODE
+    print "hello "
+    print name
+    print "\n"

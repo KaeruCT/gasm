@@ -1,0 +1,41 @@
+; code goes here
+DATA
+n 0
+end 100
+fizz 0
+buzz 0
+
+CODE
+chk_fizz:
+    inc n
+    mov n%3, fizz
+    cmp fizz, 0
+    je p_fizz, chk_buzz
+
+chk_buzz:
+    mov n%5, buzz
+    cmp buzz, 0
+    je p_buzz
+    cmp fizz, 0
+    je continue, p_n
+
+p_fizz:
+    print "fizz"
+    jmp chk_buzz
+
+p_buzz:
+    print "buzz"
+    jmp continue
+
+p_n:
+    print n
+    jmp continue
+
+continue:
+    print "\n"
+    cmp n, end
+    je end, chk_fizz
+end:
+    nop
+
+
