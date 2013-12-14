@@ -1,0 +1,21 @@
+DATA
+n 0
+n1 0
+n2 1
+i 0
+max 100
+
+CODE
+
+inc:
+    mov n1+n2, n
+    mov n1, n2
+    mov n, n1
+    println n
+    inc i
+
+    cmp i, max
+    jne inc, end
+
+end:
+    nop

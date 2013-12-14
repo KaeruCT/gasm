@@ -109,10 +109,12 @@
         if (!empty($args)) $args = parse_args($args);
 
         switch($op) {
+        case 'println':
         case 'print':
             // print expression
             $val = eval_expression($args[0]);
             if ($val === '\n') $val = "\n"; // allow printing newlines
+            if ($op === 'println') $val .= "\n"; // println shortcut
             echo $val;
             break;
 
