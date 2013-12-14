@@ -9,10 +9,6 @@
         return 1 + $pcounter + $datalen;
     }
 
-    function is_comment($line) {
-        return $line[0] === ';';
-    }
-
     function is_label ($line) {
         return substr($line, -1) === ':';
     }
