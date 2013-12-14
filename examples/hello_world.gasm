@@ -1,8 +1,17 @@
 ; code goes here
 DATA
-name "Andres"
+name "KaeruCT" ; does this work correctly
 
 CODE
-    print "hello "
-    print name
-    print "\n"
+    print "hello " ; testing comments
+    print name ;here and
+    print "\n";there
+
+
+
+
+    ;;;;;;;;;
+
+
+
+    ; don't break

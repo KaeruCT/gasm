@@ -10,7 +10,7 @@
     }
 
     function is_comment($line) {
-        return @$line[0] === ';';
+        return $line[0] === ';';
     }
 
     function is_label ($line) {
@@ -18,6 +18,7 @@
     }
 
     function parse_line($line) {
+        $line = preg_replace('%;(.*)$%m', '', $line);
         return array_map('trim', preg_split('%\s%', $line, 2));
     }
 
@@ -65,6 +66,8 @@
         } else if (is_numeric($exp)) {
             // force value to be a number
             $val = (double)$exp;
+        } else {
+            $val = $exp; // this shouldn't happen
         }
 
         return $val;
@@ -86,18 +89,15 @@
 
     // set up vars
     foreach ($data as $dline) {
-        if ($dline !== 'DATA' && !is_comment($dline)) {
-            @list($name, $value) = parse_line($dline);
-            if (!empty($name)) {
-                $vars[$name] = eval_expression($value);
-            }
-        }
+        if ($dline === 'DATA') continue;
+        @list($name, $value) = parse_line($dline);
+        if (!empty($name)) $vars[$name] = eval_expression($value);
     }
 
     // set up labels
-    foreach ($code as $i => $cline) {
-        if (is_label($cline)) {
-            $lname = substr($cline, 0, -1);
+    foreach ($code as $i => $line) {
+        if (is_label($line)) {
+            $lname = substr($line, 0, -1);
             $labels[$lname] = $i;
         }
     }
@@ -105,76 +105,73 @@
     function execute_line($line) {
         global $pcounter, $vars, $labels, $stack, $comparison;
 
-        if (is_label($line) || empty($line)) {
-            return;
-        }
+        if (is_label($line)) return;
+        if ($line = parse_line($line)) @list($op, $args) = $line;
+        if (empty($op)) return;
 
-        @list($op, $args) = parse_line($line);
         $op = strtolower($op);
-
-        if (!empty($args)) {
-            $args = parse_args($args);
-        }
+        if (!empty($args)) $args = parse_args($args);
 
         switch($op) {
         case 'print':
+            // print expression
             $val = eval_expression($args[0]);
-            if ($val === '\n') { // allow printing newlines
-                $val = "\n";
-            }
+            if ($val === '\n') $val = "\n"; // allow printing newlines
             echo $val;
             break;
 
         case 'inc':
+            // increment variable
             $vars[$args[0]] += 1;
             break;
 
         case 'dec':
+            // decrement variable
             $vars[$args[0]] -= 1;
             break;
 
         case 'push':
+            // push value into stack
             $stack[] = eval_expression($args[0]);
             break;
 
         case 'pop':
-            if (!empty($args[0])) {
-                $vars[$args[0]] = array_pop($stack);
-            } else {
-                array_pop($stack);
-            }
+            $val = array_pop($stack);
+            // store value in var if an argument was passed to pop
+            if (!empty($args[0])) $vars[$args[0]] = $val;
             break;
 
         case 'mov':
+            // store value in var
             $val = eval_expression($args[0]);
-            $var = $args[1];
-
-            $vars[$var] = $val;
+            $vars[$args[1]] = $val;
             break;
 
         case 'cmp':
             $a = eval_expression($args[0]);
             $b = eval_expression($args[1]);
+            // store comparison in comparison var
             $comparison = ($a == $b);
             break;
 
         case 'jne':
         case 'je':
-            $eq = $comparison;
+            $eq = $comparison; // use last comparison made
 
             // negate condition if op was jne
-            if ($op === 'jne') {
-                $eq = !$eq;
-            }
+            if ($op === 'jne') $eq = !$eq;
 
             if ($eq) {
+                // jump to first label
                 $pcounter = $labels[$args[0]];
             } else if (!empty($args[1])) {
+                // jump to second label
                 $pcounter = $labels[$args[1]];
             }
             break;
 
         case 'jmp':
+            // jump to label
             $pcounter = $labels[$args[0]];
             break;
 
