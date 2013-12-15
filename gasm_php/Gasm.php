@@ -148,13 +148,13 @@ class Gasm {
         case 'inc':
             if (empty($args)) $this->arg_error(1);
             // increment variable
-            $this->set_var($this->get_var($args[0]) + 1);
+            $this->set_var($args[0], $this->get_var($args[0]) + 1);
             break;
 
         case 'dec':
             if (empty($args)) $this->arg_error(1);
             // decrement variable
-            $this->set_var($this->get_var($args[0]) - 1);
+            $this->set_var($args[0], $this->get_var($args[0]) - 1);
             break;
 
         case 'push':
