@@ -1,0 +1,29 @@
+DATA
+e   1.0
+n   0   ; term number
+i   0   ; iterator for fac
+n1  0.0 ; temp var for fac 
+max 10
+
+CODE
+new_term:
+    inc n
+    mov n, i
+    mov 1.0, n1
+    cmp n, max
+    jne fac, end
+
+calc_term:
+    mov 1 / n1, n1
+    mov e + n1, e
+    jmp new_term
+
+; factorial
+fac:
+    mov n1 * i, n1
+    dec i
+    cmp i, 0
+    jne fac, calc_term
+
+end:
+    println e
