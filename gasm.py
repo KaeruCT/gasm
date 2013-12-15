@@ -68,11 +68,14 @@ def getVar(s):
         return registry[s]
     return parseLiteral(s)
 
-def main ():
+def main():
     global stack
 
-    filename = sys.argv[1]
-    f = open(filename, 'r')
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+        f = open(filename, 'r')
+    else:
+        f = sys.stdin
 
     parseData = False
 
