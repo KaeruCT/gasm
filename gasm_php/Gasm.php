@@ -7,7 +7,7 @@ class Gasm {
     private $vars = [];
     private $labels = [];
     private $stack = [];
-    private $comparison = false;
+    private $comparison = [];
 
     private function line_number() {
         return 1 + $this->code_start + $this->pc;
@@ -43,8 +43,9 @@ class Gasm {
             '\t' => "\t"
         ];
 
-        // match a simple infix notation (ie: 4+2, n*8, 2/a)
-        $ifx = '/(\w+)\s*(['.preg_quote(implode('', array_keys($ops)), '/').'])\s*(\w+)/';
+        // match a simple infix notation (ie: 4+2, n*8, 2/a, 1+0.5)
+        $w = '[\w\.]';
+        $ifx = '/('.$w.'+)\s*(['.preg_quote(implode('', array_keys($ops)), '/').'])\s*('.$w.'+)/';
 
         if (preg_match('%^".*"$%', $exp)) {
             $val = str_replace(array_keys($literals), $literals, substr($exp, 1, -1)); // replace literals in strings
@@ -128,22 +129,32 @@ class Gasm {
 
         case 'mov':
             // store value in var
-            $val = $this->eval_expression($args[0]);
-            $this->vars[$args[1]] = $val;
+            $this->vars[$args[1]] = $this->eval_expression($args[0]);
             break;
 
         case 'cmp':
-            $a = $this->eval_expression($args[0]);
-            $b = $this->eval_expression($args[1]);
-            // store comparison in comparison var
-            $this->comparison = ($a == $b);
+            // store comparison args
+            $this->comparison = [
+                $this->eval_expression($args[0]),
+                $this->eval_expression($args[1])
+            ];
             break;
 
         case 'jne':
         case 'je':
-            $eq = $this->comparison; // use last comparison made
-            if ($op === 'jne') $eq = !$eq; // negate condition if op was jne
-            if ($eq) {
+        case 'jg':
+        case 'jge':
+        case 'jl':
+        case 'jle':
+            list($a, $b) = $this->comparison;
+            if ($op === 'jne') $jmp = $a != $b;
+            if ($op === 'je') $jmp = $a == $b;
+            if ($op === 'jg') $jmp = $a > $b;
+            if ($op === 'jge') $jmp = $a >= $b;
+            if ($op === 'jl') $jmp = $a < $b;
+            if ($op === 'jle') $jmp = $a <= $b;
+
+            if ($jmp) {
                 $this->pc = $this->labels[$args[0]]; // jump to first label
             } else if (!empty($args[1])) {
                 $this->pc = $this->labels[$args[1]]; // jump to second label
