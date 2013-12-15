@@ -28,15 +28,14 @@ class Gasm {
     }
 
     private function set_var($name, $val) {
-        $valid_var = '%[A-Za-z]+\w*%';
-        if (!preg_match($valid_var, $name)) {
+        if (!preg_match('%[A-Za-z]+\w*%', $name)) {
             $this->error("{$name} is not a valid var name");
         }
         $this->vars[$name] = $val;
     }
 
     private function get_var($name) {
-        if (!array_key_exists($name, $this->vars)) {
+        if (!$this->var_exists($name)) {
             $this->error("var '{$name}' does not exist");
         }
         return $this->vars[$name];
@@ -53,7 +52,7 @@ class Gasm {
         return trim(preg_replace('%;(.*)$%m', '', $line));
     }
 
-    private function is_label ($line) {
+    private function is_label($line) {
         return substr($line, -1) === ':';
     }
 
@@ -87,8 +86,8 @@ class Gasm {
             $val = str_replace(array_keys($literals), $literals, substr($exp, 1, -1)); // replace literals in strings
         } else if (preg_match($ifx, $exp, $matches)) { // basic math expression
             list($_, $a, $op, $b) = $matches;
-            if (array_key_exists($a, $this->vars)) $a = $this->get_var($a); // replace if $a exists
-            if (array_key_exists($b, $this->vars)) $b = $this->get_var($b); // replace if $b exists
+            if ($this->var_exists($a)) $a = $this->get_var($a); // replace if $a exists
+            if ($this->var_exists($b)) $b = $this->get_var($b); // replace if $b exists
             $val = $ops[$op]((double)$a, (double)$b);
         } else if ($this->var_exists($exp)) {
             $val = $this->get_var($exp); // replace value with variable
@@ -112,8 +111,8 @@ class Gasm {
             }
             if ($parse_data) { // set up vars
                 if ($line === 'DATA') continue;
-                @list($name, $value) = $this->parse_line($line);
-                if (!empty($name)) $this->set_var($name, $this->eval_expression($value));
+                @list($name, $exp) = $this->parse_line($line);
+                if (!empty($name)) $this->set_var($name, $this->eval_expression($exp));
             } else { // set up labels
                 if ($this->is_label($line)) {
                     $lname = substr($line, 0, -1);
@@ -204,7 +203,7 @@ class Gasm {
 
             if ($jmp) {
                 $this->pc = $this->get_label($args[0]); // jump to first label
-            } else if (!empty($args[1])) {
+            } else if (array_key_exists(1, $args)) {
                 $this->pc = $this->get_label($args[1]); // jump to second label
             }
             break;
