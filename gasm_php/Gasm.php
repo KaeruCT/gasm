@@ -159,7 +159,7 @@ class Gasm {
 
         default:
             $line = $this->line_number();
-            die("INSTRUCTION NOT RECOGNIZED: {$op}, at line {$line}\n");
+            throw new Exception("INSTRUCTION NOT RECOGNIZED: {$op}, at line {$line}\n");
             break;
         }
     }
