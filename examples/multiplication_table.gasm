@@ -1,0 +1,30 @@
+DATA
+w 1
+h 1
+w_max 12
+h_max 12
+
+CODE
+println "here's a multiplication table:"
+
+start:
+    mov w * h, number ; variables don't always need to
+                      ; be declared in the data section
+    cmp w, w_max + 1
+    inc w
+    je end_row, print_n
+
+print_n:
+    print number
+    print "\t"
+    jmp start
+
+end_row:
+    mov 1, w
+    print "\n"
+    cmp h, h_max
+    inc h
+    je end, start
+
+end:
+    ; nop isn't really needed either

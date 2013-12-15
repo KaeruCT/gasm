@@ -37,6 +37,7 @@ function eval_expression($exp) {
 
     if (preg_match('%^".*"$%', $exp)) {
         $val = substr($exp, 1, -1); // remove "" and store as string
+        $val = str_replace(['\n', '\t'], ["\n", "\t"], $val); // allow printing newlines and tabs
     } else if (preg_match($ifx, $exp, $matches)) { // basic math expression
         list($dummy, $a, $op, $b) = $matches;
         if (array_key_exists($a, $vars)) $a = $vars[$a]; // replace of $a exists
@@ -99,7 +100,6 @@ function execute_line($line) {
     case 'print':
         // print expression
         $val = eval_expression($args[0]);
-        if ($val === '\n') $val = "\n"; // allow printing newlines
         if ($op === 'println') $val .= "\n"; // println shortcut
         echo $val;
         break;
