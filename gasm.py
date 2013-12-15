@@ -49,9 +49,13 @@ def parseLiteral(v):
     if v.startswith('"') and v.endswith('"'):
         v = v.strip('"')
     # num
-    elif v.isdigit():
-        v = int(v)
-
+    else:
+        try:
+            v = float(v)
+        except ValueError:
+            # TODO: handle error
+            pass
+    
     return v
 
 def stripComments(s):
