@@ -2,7 +2,7 @@
 <?php
 require('Gasm.php');
 
-$file = empty($argv[1]) ? STDIN : $argv[1];
+$file = empty($argv[1]) ? 'php://stdin' : $argv[1];
 $f = @fopen($file, 'r');
 
 if (!$f) {
