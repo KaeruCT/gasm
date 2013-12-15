@@ -19,7 +19,7 @@ $gasm->load($handle);
 fclose($handle);
 
 $out = "#!/usr/bin/php\n";
-$out .= file_get_contents('Gasm.php');
+$out .= file_get_contents(__DIR__.'/Gasm.php');
 $out .= ';$gasm = unserialize(\''.str_replace("'", "\'", serialize($gasm)).'\');';
 $out .= '$gasm->execute();';
 
