@@ -23,12 +23,13 @@ mathOps = {
 }
 
 def parseMath(s):
-    split = re.split('([\+\-*/%])', s)
+    split = [x.strip() for x in re.split('([\+\-*/%])', s)]
     if (len(split) > 2):
         # math expression
         a, op, b = split
         a = getVar(a)
         b = getVar(b)
+
         return mathOps[op](a, b)
     
     if len(split) == 1:
@@ -59,7 +60,7 @@ def stripComments(s):
 def printVars(*args):
     s = ''
     for v in args:
-        s += str(getVar(v)).replace("\\n", "\n")
+        s += str(getVar(v)).replace("\\n", "\n").replace("\\t", "\t")
 
     sys.stdout.write(s)
 
@@ -105,7 +106,7 @@ def main():
 
         if parseData:
             # parse data section
-            k, v = line.split()
+            k, v = [x.strip() for x in line.split()]
             registry[k] = parseLiteral(v)
 
         if not parseData:
@@ -134,7 +135,7 @@ def main():
             val = parseMath(args[0])
             stack.append(val)
         elif opcode == "cmp":
-            if getVar(args[0]) == getVar(args[1]):
+            if parseMath(args[0]) == parseMath(args[1]):
                 cmpReg = True
             else:
                 cmpReg = False
