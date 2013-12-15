@@ -3,7 +3,7 @@
 require('Gasm.php');
 
 if (empty($argv[1])) {
-    die ("PLEASE SPECIFY A FILE\n");
+    die ("please specify a file\n");
 }
 
 $file = $argv[1];
@@ -11,7 +11,7 @@ $outfile = !empty($argv[2]) ? $argv[2] : 'a.out';
 $handle = @fopen($file, 'r');
 
 if (empty($handle)) {
-    die ("COULD NOT OPEN FILE {$file}\n");
+    error("FATAL ERROR:\n    could not open file: {$file}\n");
 }
 
 $gasm = new Gasm();
@@ -21,7 +21,7 @@ fclose($handle);
 $out = "#!/usr/bin/php\n";
 $out .= file_get_contents(__DIR__.'/Gasm.php');
 $out .= ';$gasm = unserialize(\''.str_replace("'", "\'", serialize($gasm)).'\');';
-$out .= '$gasm->execute();';
+$out .= 'try{$gasm->execute();}catch(Exception $e){die("FATAL ERROR:\n    {$e->getMessage()}\n");}';
 
 file_put_contents($outfile, $out);
 file_put_contents($outfile, php_strip_whitespace($outfile));
