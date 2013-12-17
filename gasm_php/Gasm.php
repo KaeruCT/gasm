@@ -1,5 +1,9 @@
 <?php
 class Gasm {
+    const ID_REGEX = '%[A-Za-z_]+\w*%';
+    const STRIP_COMMENT_REGEX = '%;(.*)$%m';
+    const STRING_REGEX = '%^".*"$%';
+
     private $code = [];
     private $pc = 0;
     private $current_op;
@@ -28,7 +32,7 @@ class Gasm {
     }
 
     private function set_var($name, $val) {
-        if (!preg_match('%[A-Za-z]+\w*%', $name)) {
+        if (!preg_match(self::ID_REGEX, $name)) {
             $this->error("{$name} is not a valid var name");
         }
         $this->vars[$name] = $val;
@@ -41,6 +45,13 @@ class Gasm {
         return $this->vars[$name];
     }
 
+    private function set_label($name, $i) {
+        if (!preg_match(self::ID_REGEX, $name)) {
+            $this->error("{$name} is not a valid label name");
+        }
+        $this->labels[$name] = $i;
+    }
+
     private function get_label($name) {
         if (!array_key_exists($name, $this->labels)) {
             $this->error("no such label: '{$name}'");
@@ -49,7 +60,7 @@ class Gasm {
     }
 
     private function strip_comments($line) {
-        return trim(preg_replace('%;(.*)$%m', '', $line));
+        return trim(preg_replace(self::STRIP_COMMENT_REGEX, '', $line));
     }
 
     private function is_label($line) {
@@ -66,7 +77,7 @@ class Gasm {
     }
 
     private function parse_args($args) {
-        return array_map('trim', preg_split('%,%', $args));
+        return array_map('trim', preg_split('%,%', $args, NULL, PREG_SPLIT_NO_EMPTY));
     }
 
     private function eval_expression($exp) {
@@ -87,10 +98,10 @@ class Gasm {
         $w = '[\w\.]';
         $ifx = '/^('.$w.'+)\s*(['.preg_quote(implode('', array_keys($ops)), '/').'])\s*('.$w.'+)$/';
 
-        if (preg_match('%^".*"$%', $exp)) {
+        if (preg_match(self::STRING_REGEX, $exp)) {
             $val = str_replace(array_keys($literals), $literals, substr($exp, 1, -1)); // replace literals in strings
         } else if (preg_match($ifx, $exp, $matches)) { // basic math expression
-            list($_, $a, $op, $b) = $matches;
+            list(, $a, $op, $b) = $matches;
             if ($this->var_exists($a)) $a = $this->get_var($a); // replace if $a exists
             if ($this->var_exists($b)) $b = $this->get_var($b); // replace if $b exists
             $val = $ops[$op]((double)$a, (double)$b);
@@ -120,8 +131,7 @@ class Gasm {
                 if (!empty($name)) $this->set_var($name, $this->eval_expression($exp));
             } else { // set up labels
                 if ($this->is_label($line)) {
-                    $lname = substr($line, 0, -1);
-                    $this->labels[$lname] = $i - $this->code_start;
+                    $this->set_label(substr($line, 0, -1), $i - $this->code_start);
                 }
                 $this->code[] = $line;
             }
@@ -138,30 +148,32 @@ class Gasm {
 
         switch($op) {
         case 'println':
-            // allow println to be called without arguments
-            if (empty($args)) $args[0] = '';
+            // print expression + newline, argument is optional
+            $val = !isset($args[0]) ? '' : $this->eval_expression($args[0]);
+            echo "{$val}\n";
+            break;
+
         case 'print':
-            if (empty($args)) $this->arg_error(1);
+            if (!isset($args[0])) $this->arg_error(1);
             // print expression
             $val = $this->eval_expression($args[0]);
-            if ($op === 'println') $val .= "\n"; // println shortcut
             echo $val;
             break;
 
         case 'inc':
-            if (empty($args)) $this->arg_error(1);
+            if (!isset($args[0])) $this->arg_error(1);
             // increment variable
             $this->set_var($args[0], $this->get_var($args[0]) + 1);
             break;
 
         case 'dec':
-            if (empty($args)) $this->arg_error(1);
+            if (!isset($args[0])) $this->arg_error(1);
             // decrement variable
             $this->set_var($args[0], $this->get_var($args[0]) - 1);
             break;
 
         case 'push':
-            if (empty($args)) $this->arg_error(1);
+            if (!isset($args[0])) $this->arg_error(1);
             // push value into stack
             $this->stack[] = $this->eval_expression($args[0]);
             break;
@@ -169,7 +181,7 @@ class Gasm {
         case 'pop':
             $val = array_pop($this->stack);
             // store value in var if an argument was passed to pop
-            if (!empty($args[0])) $this->set_var($args[0], $val);
+            if (!!isset($args[0])) $this->set_var($args[0], $val);
             break;
 
         case 'mov':
@@ -193,7 +205,7 @@ class Gasm {
         case 'jge':
         case 'jl':
         case 'jle':
-            if (empty($args)) $this->arg_error(1);
+            if (!isset($args[0])) $this->arg_error(1);
             if (empty($this->comparison)) {
                 $this->error("use cmp before using {$op}");
             }
@@ -213,7 +225,7 @@ class Gasm {
             break;
 
         case 'jmp':
-            if (empty($args)) $this->arg_error(1);
+            if (!isset($args[0])) $this->arg_error(1);
             $this->pc = $this->get_label($args[0]); // jump to label
             break;
 

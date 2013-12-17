@@ -7,11 +7,14 @@ function error($message) {
 }
 
 $gasm = new Gasm();
+$f = '';
+echo "gasm 0.1";
 
-while ($f = fgets(STDIN)) {
+do {
     try {
         $gasm->repl_execute_line($f);
     } catch (Exception $e) {
         error($e->getMessage());
     }
-}
+    echo "\n>>> ";
+} while ($f = fgets(STDIN));
