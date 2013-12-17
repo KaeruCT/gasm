@@ -22,8 +22,12 @@ class Gasm(object):
         self.labels = {}
         self.stack = []
         self.cmpReg = False
-    # parsing functions
+        
+        self.currentLine = 0
+        self.codeLine = 0
 
+
+    # parsing functions
     # parses a math expression, expanding variables
     def parseMath(self, s):
         split = [x.strip() for x in re.split('([\+\-*/%])', s)]
@@ -83,13 +87,12 @@ class Gasm(object):
     def executeFile(self, f):
         parseData = False
 
-        i = 0
-        idxCode = 0
-        lines = [x.strip() for x in f.readlines()]
-        while i < len(lines):
-            line = self.stripComments(lines[i])
+        codeLine = 0
 
-            i += 1
+        i = 0
+        lines = [x.strip() for x in f.readlines()]
+        for i in range(0, len(lines)):
+            line = self.stripComments(lines[i])
 
             if len(line) == 0:
                 continue
@@ -98,7 +101,7 @@ class Gasm(object):
                 continue
 
             if line == "CODE":
-                idxCode = i
+                self.codeLine = i + 1
                 parseData = False
                 continue
             
@@ -115,51 +118,54 @@ class Gasm(object):
                 # parse labels
                 if line.endswith(':'):
                     self.labels[line[:-1]] = i
+       
+        self.currentLine = self.codeLine
+        while self.currentLine < len(lines):
+            self.executeLine(lines[self.currentLine])
+            self.currentLine += 1
 
-        i = idxCode
-        while i < len(lines):
-            line = self.stripComments(lines[i])
-            #print self.stack, i, line, self.registry
-            i += 1
+    def executeLine(self, line):
+        line = self.stripComments(line)
+        #print self.stack, self.currentLine, line, self.registry
 
-            if len(line) == 0 or line.startswith(';') or line.endswith(':'):
-                continue
+        if len(line) == 0 or line.startswith(';') or line.endswith(':'):
+            return
 
-            opcode, args = self.parseLine(line)
-            if opcode == "inc":
-                self.registry[args[0]] += 1
-            elif opcode == "dec":
-                self.registry[args[0]] -= 1
-            elif opcode == "mov":
-                self.registry[args[1]] = self.parseMath(args[0])
-            elif opcode == "push":
-                val = self.parseMath(args[0])
-                self.stack.append(val)
-            elif opcode == "cmp":
-                if self.parseMath(args[0]) == self.parseMath(args[1]):
-                    cmpReg = True
-                else:
-                    cmpReg = False
-            elif opcode == "je":
-                if cmpReg:
-                    i = self.labels[args[0]]
-                elif len(args) > 1:
-                    i = self.labels[args[1]]
-            elif opcode == "jne":
-                if not cmpReg:
-                    i = self.labels[args[0]]
-                elif len(args) > 1:
-                    i = self.labels[args[1]]
-            elif opcode == "jmp":
-                i = self.labels[args[0]]
-            elif opcode == "pop":
-                self.stack = self.stack[:-int(args[0])]
-            elif opcode == "print":
-                self.printVars(args[0])
-            elif opcode == "println":
-                self.printVars(args[0], "\n")
-            elif opcode == "nop":
-                continue
+        opcode, args = self.parseLine(line)
+        if opcode == "inc":
+            self.registry[args[0]] += 1
+        elif opcode == "dec":
+            self.registry[args[0]] -= 1
+        elif opcode == "mov":
+            self.registry[args[1]] = self.parseMath(args[0])
+        elif opcode == "push":
+            val = self.parseMath(args[0])
+            self.stack.append(val)
+        elif opcode == "cmp":
+            if self.parseMath(args[0]) == self.parseMath(args[1]):
+                self.cmpReg = True
             else:
-                print "INSTRUCTION NOT RECOGNIZED: {0}, at line {1}".format(opcode, i)
-                sys.exit(1)
+                self.cmpReg = False
+        elif opcode == "je":
+            if self.cmpReg:
+                self.currentLine = self.labels[args[0]]
+            elif len(args) > 1:
+                self.currentLine = self.labels[args[1]]
+        elif opcode == "jne":
+            if not self.cmpReg:
+                self.currentLine = self.labels[args[0]]
+            elif len(args) > 1:
+                self.currentLine = self.labels[args[1]]
+        elif opcode == "jmp":
+            self.currentLine = self.labels[args[0]]
+        elif opcode == "pop":
+            self.stack = self.stack[:-int(args[0])]
+        elif opcode == "print":
+            self.printVars(args[0])
+        elif opcode == "println":
+            self.printVars(args[0], "\n")
+        elif opcode == "nop":
+            return
+        else:
+            print "INSTRUCTION NOT RECOGNIZED: {0}, at line {1}".format(opcode, i)
+            sys.exit(1)
