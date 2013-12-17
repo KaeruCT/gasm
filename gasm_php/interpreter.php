@@ -1,23 +1,43 @@
 #!/usr/bin/php
 <?php
 require('Gasm.php');
-
-$file = empty($argv[1]) ? 'php://stdin' : $argv[1];
-$f = @fopen($file, 'r');
-
-function error($message) {
-    die("FATAL ERROR:\n    {$message}\n");
-}
-
-if (!$f) {
-    error("could not open file: {$file}");
-}
-
 $gasm = new Gasm();
-$gasm->load($f);
-try {
-    $gasm->execute();
-} catch (Exception $e) {
-    error($e->getMessage());
+
+function repl() {
+    global $is_repl, $gasm;
+    $is_repl = true;
+    $f = '';
+    echo "gasm 0.1";
+
+    do {
+        try {
+            $gasm->repl_execute_line($f);
+        } catch (Exception $e) {
+            echo "ERROR:\n    {$e->getMessage()}\n";
+        }
+        echo "\n>>> ";
+    } while ($f = fgets(STDIN));
 }
-fclose($f);
+
+function interpret ($stream) {
+    global $gasm;
+    if ($stream === false) {
+        error("could not open file");
+    }
+
+    $gasm->load($stream);
+    try {
+        $gasm->execute();
+    } catch (Exception $e) {
+        die("FATAL ERROR:\n    {$e->getMessage()}\n");
+    }
+    fclose($stream);
+}
+
+
+if (posix_isatty(STDIN) && !isset($argv[1])) {
+    repl();
+} else {
+    $stream = isset($argv[1]) ? @fopen($argv[1], 'r') : STDIN;
+    interpret($stream);
+}
