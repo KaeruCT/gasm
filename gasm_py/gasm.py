@@ -75,7 +75,13 @@ class Gasm(object):
     def printVars(self, *args):
         s = ''
         for v in args:
-            s += str(self.getVar(v)).replace("\\n", "\n").replace("\\t", "\t")
+            v = self.getVar(v)
+            
+            # cast whole integers to int so they print neatly 
+            if isinstance(v, float) and v.is_integer():
+                v = int(v)
+
+            s += str(v).replace("\\n", "\n").replace("\\t", "\t")
 
         sys.stdout.write(s)
 
