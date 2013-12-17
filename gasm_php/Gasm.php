@@ -56,8 +56,13 @@ class Gasm {
         return substr($line, -1) === ':';
     }
 
-    private function parse_line($line) {
+    private function split_line($line) {
         return array_map('trim', preg_split('%\s%', $line, 2));
+    }
+
+    private function parse_line($line) {
+        @list($op, $args) = $this->split_line($line);
+        return [$op, $this->parse_args($args)];
     }
 
     private function parse_args($args) {
@@ -111,7 +116,7 @@ class Gasm {
             }
             if ($parse_data) { // set up vars
                 if ($line === 'DATA') continue;
-                @list($name, $exp) = $this->parse_line($line);
+                @list($name, $exp) = $this->split_line($line);
                 if (!empty($name)) $this->set_var($name, $this->eval_expression($exp));
             } else { // set up labels
                 if ($this->is_label($line)) {
@@ -121,16 +126,15 @@ class Gasm {
                 $this->code[] = $line;
             }
         }
-        $this->code_len = sizeof($this->code);
+        $this->code_len = count($this->code);
     }
 
-    public function execute_line($line) {
+    private function execute_line($line) {
         if ($this->is_label($line)) return;
-        if ($line = $this->parse_line($line)) @list($op, $args) = $line;
+        @list($op, $args) = $this->parse_line($line);
         if (empty($op)) return;
 
-        $this->current_op = strtolower($op);
-        if (!empty($args)) $args = $this->parse_args($args);
+        $this->current_op = $op = strtolower($op);
 
         switch($op) {
         case 'println':
@@ -169,13 +173,13 @@ class Gasm {
             break;
 
         case 'mov':
-            if (sizeof($args) !== 2) $this->arg_error(2);
+            if (count($args) !== 2) $this->arg_error(2);
             // store value in var
             $this->set_var($args[1], $this->eval_expression($args[0]));
             break;
 
         case 'cmp':
-            if (sizeof($args) !== 2) $this->arg_error(2);
+            if (count($args) !== 2) $this->arg_error(2);
             // store comparison args
             $this->comparison = [
                 $this->eval_expression($args[0]),
@@ -222,9 +226,13 @@ class Gasm {
         }
     }
 
+    public function repl_execute_line($line) {
+        $this->execute_line($this->strip_comments($line));
+    }
+
     public function execute() {
         for ($this->pc = 0; $this->pc < $this->code_len; $this->pc += 1) {
-            $this->execute_line($this->code[$this->pc]);
+            $this->repl_execute_line($this->code[$this->pc]);
         }
     }
 }
