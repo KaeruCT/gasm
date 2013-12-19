@@ -1,13 +1,21 @@
 #!/usr/bin/env python2
 
 import sys
-from gasm import Gasm
+from gasm import Gasm, ParseError
+
+def die(msg):
+    print msg
+    sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         filename = sys.argv[1]
         f = open(filename, 'r')
-        Gasm().executeFile(f)
+
+        try:
+            Gasm().executeFile(f)
+        except ParseError as e:
+            die(e)
     
     elif not sys.stdin.isatty():
         print "piped"
@@ -24,6 +32,5 @@ if __name__ == "__main__":
 
             try:
                 g.executeLine(line)
-            except Exception:
-                pass
-                #potato 
+            except ParseError as e:
+                print e

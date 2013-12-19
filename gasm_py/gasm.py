@@ -28,9 +28,9 @@ class ParseError(Exception):
 
     def __str__(self):
         if self.data is not None:
-            return '${0}: ${1} on line ${2}'.format(message, data, line)
+            return '{0}: {1} at line {2}'.format(self.message, self.data, self.line)
         else:
-            return '${0} on line ${1}'.format(message, line)
+            return '{0} on line {1}'.format(self.message, self.line)
 
 class Gasm(object):
     def __init__(self):
@@ -120,7 +120,7 @@ class Gasm(object):
             if s in self.registry:
                 return self.registry[s]
             
-            raise ParseError("Couldn't parse variable", self.currentLine, s)
+            raise ParseError("No such variable", self.currentLine, s)
 
     def setVar(self, k, v):
         if self.isValidVarName(k):
