@@ -56,7 +56,7 @@ class Gasm(object):
 
     # cleans up raw code lines into an opcode and arguments
     def parseLine(self, s):
-        opcode, _, args = s.partition(' ')
+        opcode, _, args = s.strip().partition(' ')
         args = [x.strip() for x in args.split(',')]
 
         return opcode, args
