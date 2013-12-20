@@ -3,17 +3,12 @@ import sys
 import re
 
 # math operators
-def add(a, b): return a + b
-def sub(a, b): return a - b
-def mul(a, b): return a * b
-def dev(a, b): return a / b
-def mod(a, b): return a % b
 mathOps = {
-    '+': add,
-    '-': sub,
-    '*': mul,
-    '/': dev,
-    '%': mod
+    '+': lambda a, b: a + b,
+    '-': lambda a, b: a - b,
+    '*': lambda a, b: a * b,
+    '/': lambda a, b: a / b,
+    '%': lambda a, b: a % b
 }
 
 # regexes
