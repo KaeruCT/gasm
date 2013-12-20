@@ -37,6 +37,15 @@ class ParseError(Exception):
         else:
             return '{0} on line {1}'.format(self.message, self.line)
 
+class ArgumentError(ParseError):
+    def __init__(self, line, opcode, num):
+        self.line = line
+        self.opcode = opcode
+        self.num = num
+
+    def __str__(self):
+        return 'Instruction {0} expects {1} argument(s) at line {2}'.format(self.opcode, self.num, self.line)
+
 class Gasm(object):
     def __init__(self):
         self.registry = {}
@@ -188,17 +197,29 @@ class Gasm(object):
 
         opcode, args = self.parseLine(line)
         if opcode == "inc":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.executeLine("mov {0}+1, {0}".format(args[0]))
         elif opcode == "dec":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.executeLine("mov {0}-1, {0}".format(args[0]))
         elif opcode == "mov":
+            if len(args) < 2: raise ArgumentError(self.currentLine, opcode, 2)
+
             self.setVar(args[1], self.getVar(args[0]))
         elif opcode == "push":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 1)
+            
             val = self.getVar(args[0])
             self.stack.append(val)
         elif opcode == "cmp":
+            if len(args) < 2: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.cmpReg = (self.getVar(args[0]), self.getVar(args[1]))
         elif opcode in jumpOps:
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             if self.cmpReg:
                 # FIXME: should we enclose this in a try/finally block?
                 if jumpOps[opcode](*self.cmpReg):
@@ -209,10 +230,16 @@ class Gasm(object):
             else:
                 raise ParseError("No comparison made for instruction", self.currentLine, opcode)
         elif opcode == "jmp":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.currentLine = self.labels[args[0]]
         elif opcode == "pop":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.stack = self.stack[:-int(args[0])]
         elif opcode == "print":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.printVars(args[0])
         elif opcode == "println":
             self.printVars(args[0], "\"\n\"")
