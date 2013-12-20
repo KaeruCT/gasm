@@ -11,6 +11,16 @@ mathOps = {
     '%': lambda a, b: a % b
 }
 
+# jump conditionals
+jumpOps = {
+    'je':  lambda a, b: a == b,
+    'jne': lambda a, b: a != b,
+    'jg':  lambda a, b: a > b,
+    'jge': lambda a, b: a >= b,
+    'jl':  lambda a, b: a < b,
+    'jle': lambda a, b: a <= b,
+}
+
 # regexes
 VAR_REX = re.compile("[A-Za-z_]+\w*")
 MATH_REX = re.compile("^([\w\.]+)\s*([{0}])\s*([\w\.]+)$".format(str.join('', [re.escape(x) for x in mathOps.keys()])))
@@ -123,6 +133,12 @@ class Gasm(object):
         else:
             raise ParseError("Invalid var name", self.currentLine, k)
 
+    def getLabel(self, s):
+        if s in self.labels:
+            return self.labels[s]
+        else:
+            raise ParseError("No such label", self.currentLine, s)
+
     def executeFile(self, f):
         parseData = False
 
@@ -181,20 +197,17 @@ class Gasm(object):
             val = self.getVar(args[0])
             self.stack.append(val)
         elif opcode == "cmp":
-            if self.getVar(args[0]) == self.getVar(args[1]):
-                self.cmpReg = True
-            else:
-                self.cmpReg = False
-        elif opcode == "je":
+            self.cmpReg = (self.getVar(args[0]), self.getVar(args[1]))
+        elif opcode in jumpOps:
             if self.cmpReg:
-                self.currentLine = self.labels[args[0]]
-            elif len(args) > 1:
-                self.currentLine = self.labels[args[1]]
-        elif opcode == "jne":
-            if not self.cmpReg:
-                self.currentLine = self.labels[args[0]]
-            elif len(args) > 1:
-                self.currentLine = self.labels[args[1]]
+                # FIXME: should we enclose this in a try/finally block?
+                if jumpOps[opcode](*self.cmpReg):
+                    self.currentLine = self.getLabel(args[0])
+                elif len(args) > 1:
+                    self.currentLine = self.getLabel(args[1])
+                self.cmpReg = ()
+            else:
+                raise ParseError("No comparison made for instruction", self.currentLine, opcode)
         elif opcode == "jmp":
             self.currentLine = self.labels[args[0]]
         elif opcode == "pop":
