@@ -3,18 +3,48 @@ import sys
 import re
 
 # math operators
-def add(a, b): return a + b
-def sub(a, b): return a - b
-def mul(a, b): return a * b
-def dev(a, b): return a / b
-def mod(a, b): return a % b
 mathOps = {
-    '+': add,
-    '-': sub,
-    '*': mul,
-    '/': dev,
-    '%': mod
+    '+': lambda a, b: a + b,
+    '-': lambda a, b: a - b,
+    '*': lambda a, b: a * b,
+    '/': lambda a, b: a / b,
+    '%': lambda a, b: a % b
 }
+
+# jump conditionals
+jumpOps = {
+    'je':  lambda a, b: a == b,
+    'jne': lambda a, b: a != b,
+    'jg':  lambda a, b: a > b,
+    'jge': lambda a, b: a >= b,
+    'jl':  lambda a, b: a < b,
+    'jle': lambda a, b: a <= b,
+}
+
+# regexes
+VAR_REX = re.compile("[A-Za-z_]+\w*")
+MATH_REX = re.compile("^([\w\.]+)\s*([{0}])\s*([\w\.]+)$".format(str.join('', [re.escape(x) for x in mathOps.keys()])))
+
+class ParseError(Exception):
+    def __init__(self, message, line, data=None):
+        self.message = message
+        self.data = data
+        self.line = line
+
+    def __str__(self):
+        if self.data is not None:
+            return '{0}: {1} at line {2}'.format(self.message, self.data, self.line)
+        else:
+            return '{0} on line {1}'.format(self.message, self.line)
+
+class ArgumentError(ParseError):
+    def __init__(self, line, opcode, num):
+        self.line = line
+        self.opcode = opcode
+        self.num = num
+
+    def __str__(self):
+        return 'Instruction {0} expects {1} argument(s) at line {2}'.format(self.opcode, self.num, self.line)
 
 class Gasm(object):
     def __init__(self):
@@ -26,26 +56,21 @@ class Gasm(object):
         self.currentLine = 0
         self.codeLine = 0
 
-
     # parsing functions
     # parses a math expression, expanding variables
     def parseMath(self, s):
-        split = [x.strip() for x in re.split('([\+\-*/%])', s)]
+        split = [x.strip() for x in MATH_REX.split(s)]
         if (len(split) > 2):
             # math expression
-            a, op, b = split
+            a, op, b = split[1:-1]
             a = self.getVar(a)
             b = self.getVar(b)
 
             return mathOps[op](a, b)
-        
-        if len(split) == 1:
-            v = self.getVar(split[0])
-            return v
 
     # cleans up raw code lines into an opcode and arguments
     def parseLine(self, s):
-        opcode, _, args = s.partition(' ')
+        opcode, _, args = s.strip().partition(' ')
         args = [x.strip() for x in args.split(',')]
 
         return opcode, args
@@ -62,9 +87,12 @@ class Gasm(object):
                 v = float(v)
             except ValueError:
                 # TODO: handle error
-                pass
+                pas
         
         return v
+
+    def isValidVarName(self, s):
+        return VAR_REX.match(s) is not None
 
     def isComment(self, s):
         return s.startswith(';')
@@ -86,19 +114,49 @@ class Gasm(object):
         sys.stdout.write(s)
 
     def getVar(self, s):
-        if s in self.registry:
-            return self.registry[s]
-        return self.parseLiteral(s)
+        # special case for internal calls from e.g. parseMath
+        if isinstance(s, float): 
+            return s
+
+        # match strings first
+        if s.startswith('"') and s.endswith('"'):
+            return s.strip('"')
+
+        # match math expressions
+        if MATH_REX.match(s):
+            return self.parseMath(s)
+
+        # finally try and convert to float
+        try:
+            return float(s)
+        except ValueError:
+            # wasn't a float, try to porse as a variable
+            if s in self.registry:
+                return self.registry[s]
+            
+            raise ParseError("No such variable", self.currentLine, s)
+
+    def setVar(self, k, v):
+        if self.isValidVarName(k):
+           self.registry[k] = self.getVar(v)
+        else:
+            raise ParseError("Invalid var name", self.currentLine, k)
+
+    def getLabel(self, s):
+        if s in self.labels:
+            return self.labels[s]
+        else:
+            raise ParseError("No such label", self.currentLine, s)
 
     def executeFile(self, f):
         parseData = False
 
         codeLine = 0
 
-        i = 0
+        self.currentLine = 0
         lines = [x.strip() for x in f.readlines()]
-        for i in range(0, len(lines)):
-            line = self.stripComments(lines[i])
+        for self.currentLine in range(0, len(lines)):
+            line = self.stripComments(lines[self.currentLine])
 
             if len(line) == 0:
                 continue
@@ -107,7 +165,7 @@ class Gasm(object):
                 continue
 
             if line == "CODE":
-                self.codeLine = i + 1
+                self.codeLine = self.currentLine  + 1
                 parseData = False
                 continue
             
@@ -118,12 +176,12 @@ class Gasm(object):
             if parseData:
                 # parse data section
                 k, v = [x.strip() for x in line.split()]
-                self.registry[k] = self.parseLiteral(v)
+                self.setVar(k, v)
 
             if not parseData:
                 # parse labels
                 if line.endswith(':'):
-                    self.labels[line[:-1]] = i
+                    self.labels[line[:-1]] = self.currentLine
        
         self.currentLine = self.codeLine
         while self.currentLine < len(lines):
@@ -139,39 +197,54 @@ class Gasm(object):
 
         opcode, args = self.parseLine(line)
         if opcode == "inc":
-            self.registry[args[0]] += 1
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
+            self.executeLine("mov {0}+1, {0}".format(args[0]))
         elif opcode == "dec":
-            self.registry[args[0]] -= 1
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
+            self.executeLine("mov {0}-1, {0}".format(args[0]))
         elif opcode == "mov":
-            self.registry[args[1]] = self.parseMath(args[0])
+            if len(args) < 2: raise ArgumentError(self.currentLine, opcode, 2)
+
+            self.setVar(args[1], self.getVar(args[0]))
         elif opcode == "push":
-            val = self.parseMath(args[0])
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 1)
+            
+            val = self.getVar(args[0])
             self.stack.append(val)
         elif opcode == "cmp":
-            if self.parseMath(args[0]) == self.parseMath(args[1]):
-                self.cmpReg = True
-            else:
-                self.cmpReg = False
-        elif opcode == "je":
+            if len(args) < 2: raise ArgumentError(self.currentLine, opcode, 2)
+            
+            self.cmpReg = (self.getVar(args[0]), self.getVar(args[1]))
+        elif opcode in jumpOps:
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             if self.cmpReg:
-                self.currentLine = self.labels[args[0]]
-            elif len(args) > 1:
-                self.currentLine = self.labels[args[1]]
-        elif opcode == "jne":
-            if not self.cmpReg:
-                self.currentLine = self.labels[args[0]]
-            elif len(args) > 1:
-                self.currentLine = self.labels[args[1]]
+                # FIXME: should we enclose this in a try/finally block?
+                if jumpOps[opcode](*self.cmpReg):
+                    self.currentLine = self.getLabel(args[0])
+                elif len(args) > 1:
+                    self.currentLine = self.getLabel(args[1])
+                self.cmpReg = ()
+            else:
+                raise ParseError("No comparison made for instruction", self.currentLine, opcode)
         elif opcode == "jmp":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.currentLine = self.labels[args[0]]
         elif opcode == "pop":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.stack = self.stack[:-int(args[0])]
         elif opcode == "print":
+            if len(args) < 1: raise ArgumentError(self.currentLine, opcode, 2)
+            
             self.printVars(args[0])
         elif opcode == "println":
-            self.printVars(args[0], "\n")
+            self.printVars(args[0], "\"\n\"")
         elif opcode == "nop":
             return
         else:
-            print "INSTRUCTION NOT RECOGNIZED: {0}, at line {1}".format(opcode, i)
+            raise ParseError("Instruction not recognized", self.currentLine, opcode)
             sys.exit(1)
