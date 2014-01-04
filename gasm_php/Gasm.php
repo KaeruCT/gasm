@@ -244,7 +244,7 @@ class Gasm {
 
     public function execute() {
         for ($this->pc = 0; $this->pc < $this->code_len; $this->pc += 1) {
-            $this->repl_execute_line($this->code[$this->pc]);
+            $this->execute_line($this->code[$this->pc]);
         }
     }
 }
