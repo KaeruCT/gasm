@@ -1,6 +1,6 @@
 #!/usr/bin/php
 <?php
-require('Gasm.php');
+require_once('Gasm.php');
 $gasm = new Gasm();
 
 function repl() {

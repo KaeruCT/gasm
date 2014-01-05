@@ -1,6 +1,6 @@
 #!/usr/bin/php
 <?php
-require('Gasm.php');
+require_once('Gasm.php');
 
 if (empty($argv[1])) {
     die ("please specify a file\n");
