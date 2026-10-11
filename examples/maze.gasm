@@ -1,0 +1,95 @@
+; comb maze: one open corridor per row, one opening between rows
+; entrance at top-left, exit at bottom-right
+DATA
+W 10
+H 7
+r 0
+c 0
+conn 0
+
+CODE
+; top border with entrance at cell 0
+print "+"
+mov 0, c
+top:
+    cmp c, W
+    jge top_done
+    cmp c, 0
+    je top_gap
+    print "---+"
+    jmp top_next
+top_gap:
+    print "   +"
+top_next:
+    inc c
+    jmp top
+top_done:
+    println ""
+
+mov 0, r
+row:
+    cmp r, H
+    jge bottom
+
+    ; corridor interior, walls open inside the row
+    print "|"
+    mov 0, c
+    interior:
+        cmp c, W
+        jge interior_done
+        print "   "
+        cmp c, W - 1
+        je outer_wall
+        print " "
+        jmp interior_next
+    outer_wall:
+        print "|"
+    interior_next:
+        inc c
+        jmp interior
+    interior_done:
+        println ""
+
+    ; floor, one gap at column (r % W), solid on the last row
+    mov r % W, conn
+    print "+"
+    mov 0, c
+    floor:
+        cmp c, W
+        jge floor_done
+        cmp r, H - 1
+        je floor_solid
+        cmp c, conn
+        je floor_gap
+    floor_solid:
+        print "---+"
+        jmp floor_next
+    floor_gap:
+        print "   +"
+    floor_next:
+        inc c
+        jmp floor
+    floor_done:
+        println ""
+
+    inc r
+    jmp row
+
+; bottom border with exit at cell W-1
+bottom:
+    print "+"
+    mov 0, c
+    bottom_loop:
+        cmp c, W
+        jge end
+        cmp c, W - 1
+        je bottom_gap
+        print "---+"
+        jmp bottom_next
+    bottom_gap:
+        print "   +"
+    bottom_next:
+        inc c
+        jmp bottom_loop
+end:
+    nop

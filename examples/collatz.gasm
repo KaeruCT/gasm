@@ -1,0 +1,35 @@
+; print the Collatz sequence for a starting number,
+; then the step count and the maximum value reached
+DATA
+n     27
+steps 0
+max   0
+
+CODE
+mov n, max
+loop:
+    cmp n, 1
+    je done
+    print n
+    print " "
+    cmp n % 2, 0
+    je even, odd
+odd:
+    mov n * 3, n
+    inc n
+    jmp update
+even:
+    mov n / 2, n
+update:
+    inc steps
+    cmp n, max
+    jle loop, record
+record:
+    mov n, max
+    jmp loop
+done:
+    print n
+    print " -> "
+    println steps
+    print "max "
+    println max

@@ -1,0 +1,39 @@
+; print perfect numbers below a limit
+; a perfect number equals the sum of its proper divisors
+; proper divisors pair up as d and n/d, so only check d*d <= n
+DATA
+n     2
+limit 10000
+sum   0
+d     0
+q     0
+
+CODE
+outer:
+    mov 1, sum
+    mov 2, d
+    divisors:
+        cmp d * d, n
+        jg verdict, test
+    test:
+        cmp n % d, 0
+        jne next
+        mov n / d, q
+        mov sum + d, sum
+        cmp q, d
+        je next, add_q
+    add_q:
+        mov sum + q, sum
+    next:
+        inc d
+        jmp divisors
+    verdict:
+        cmp sum, n
+        jne skip
+        println n
+    skip:
+        inc n
+        cmp n, limit
+        jl outer
+    done:
+        nop

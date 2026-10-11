@@ -1,0 +1,16 @@
+; greatest common divisor of two numbers, Euclid's algorithm
+DATA
+a 252
+b 105
+t 0
+
+CODE
+loop:
+    cmp b, 0
+    je done
+    mov a % b, t
+    mov b, a
+    mov t, b
+    jmp loop
+done:
+    println a

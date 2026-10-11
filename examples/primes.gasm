@@ -1,0 +1,30 @@
+; print the first N prime numbers using trial division
+DATA
+candidate 2
+count     0
+limit     20
+d         0
+
+CODE
+outer:
+    mov 2, d
+    check:
+        cmp d * d, candidate
+        jg found_prime, divide
+    divide:
+        cmp candidate % d, 0
+        je not_prime
+        inc d
+        jmp check
+
+    found_prime:
+        println candidate
+        inc count
+
+    not_prime:
+        inc candidate
+        cmp count, limit
+        jl outer
+
+    done:
+        nop
